@@ -1,0 +1,33 @@
+name: Docker image build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build --tag docker-practice-lab:${GITHUB_SHA} .
+
+      - name: Show built image
+        env:
+          IMAGE_TAG: docker-practice-lab:${{ github.sha }}
+        run: |
+          docker image ls "$IMAGE_TAG"
+          image_id=$(docker image inspect "$IMAGE_TAG" --format '{{.Id}}')
+          image_size=$(docker image inspect "$IMAGE_TAG" --format '{{.Size}}')
+          {
+            echo "## Built Docker image"
+            echo ""
+            echo "- **Tag:** \`$IMAGE_TAG\`"
+            echo "- **Image ID:** \`$image_id\`"
+            echo "- **Size:** $image_size bytes"
+            echo ""
+            echo "The image remains on the GitHub Actions runner and is not published."
+          } >> "$GITHUB_STEP_SUMMARY"
