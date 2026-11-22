@@ -42,8 +42,19 @@ jobs:
           container_id=$(docker run --detach --publish 127.0.0.1:3001:3001 "$IMAGE_TAG")
           trap 'docker rm --force "$container_id" >/dev/null' EXIT
 
-          if ! response=$(curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 2 http://127.0.0.1:3001/api/health); then
+          ready=false
+          response=''
+          for attempt in {1..15}; do
+            if response=$(curl --fail --silent --connect-timeout 2 --max-time 2 http://127.0.0.1:3001/api/health); then
+              ready=true
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$ready" != true ]; then
             docker logs "$container_id"
+            echo "Health endpoint did not become ready after 15 attempts." >&2
             exit 1
           fi
 
