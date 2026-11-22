@@ -36,7 +36,7 @@ jobs:
 
       - name: Show published image
         env:
-          IMAGE_NAME: ${{ vars.DOCKERHUB_USERNAME }}/s13gyandocker-practice-lab2
+          IMAGE_NAME: ${{ vars.DOCKERHUB_USERNAME }}/docker-practice-lab
           IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           {
