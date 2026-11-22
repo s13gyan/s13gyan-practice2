@@ -34,9 +34,31 @@ jobs:
             ${{ vars.DOCKERHUB_USERNAME }}/docker-practice-lab:latest
             ${{ vars.DOCKERHUB_USERNAME }}/docker-practice-lab:${{ github.sha }}
 
+      - name: Run and verify published image
+        env:
+          IMAGE_TAG: ${{ vars.DOCKERHUB_USERNAME }}/docker-practice-lab:${{ github.sha }}
+        run: |
+          docker pull "$IMAGE_TAG"
+          container_id=$(docker run --detach --publish 127.0.0.1:3001:3001 "$IMAGE_TAG")
+          trap 'docker rm --force "$container_id" >/dev/null' EXIT
+
+          if ! response=$(curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 2 http://127.0.0.1:3001/api/health); then
+            docker logs "$container_id"
+            exit 1
+          fi
+
+          printf '%s\n' "$response"
+          if ! printf '%s\n' "$response" | grep -q '"status":"ok"'; then
+            docker logs "$container_id"
+            echo "Health endpoint returned an unexpected response." >&2
+            exit 1
+          fi
+
+          docker image ls "$IMAGE_TAG"
+
       - name: Show published image
         env:
-          IMAGE_NAME: ${{ vars.DOCKERHUB_USERNAME }}/s13gyandocker-practice-lab2
+          IMAGE_NAME: ${{ vars.DOCKERHUB_USERNAME }}/docker-practice-lab
           IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           {
@@ -45,6 +67,7 @@ jobs:
             echo "- \`$IMAGE_NAME:latest\`"
             echo "- \`$IMAGE_NAME:${GITHUB_SHA}\`"
             echo "- **Digest:** \`$IMAGE_DIGEST\`"
+            echo "- **Container health check:** passed"
             echo ""
-            echo "Published to Docker Hub."
+            echo "Published to Docker Hub and verified by running the SHA-tagged image."
           } >> "$GITHUB_STEP_SUMMARY"
